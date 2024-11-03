@@ -6,8 +6,11 @@
   <title>QR Code Scanner</title>
   <style>
     /* Basic styling */
-    #qr-reader {
-      display: none; /* Hide the scanner until the button is clicked */
+    #video {
+      display: none; /* Hide the scanner video feed initially */
+      width: 100%;
+      max-width: 400px;
+      margin-top: 20px;
     }
     .button {
       padding: 10px 20px;
@@ -23,52 +26,43 @@
       font-size: 18px;
     }
   </style>
-  <!-- Import the html5-qrcode library -->
-  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+  <!-- Import the ZXing library for QR code scanning -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/zxing/1.4.1/zxing.min.js"></script>
 </head>
 <body>
 
   <!-- Button to open the QR scanner -->
   <button class="button" onclick="startScanner()">Scan QR Code</button>
 
-  <!-- QR Code Scanner -->
-  <div id="qr-reader"></div>
+  <!-- Video element to show camera feed -->
+  <video id="video"></video>
 
   <!-- Display scanned QR result -->
   <div id="qr-result">Scanned QR Data: <span id="qr-data"></span></div>
 
   <script>
     let x = ""; // Variable to store QR code data
+    let codeReader = new ZXing.BrowserQRCodeReader();
 
     // Function to start the QR scanner
     function startScanner() {
-      document.getElementById("qr-reader").style.display = "block";
+      const videoElement = document.getElementById("video");
+      videoElement.style.display = "block"; // Show the video feed
 
-      // Initialize html5Qrcode and configure the scanning
-      const qrCodeReader = new Html5Qrcode("qr-reader");
-
-      qrCodeReader.start(
-        { facingMode: "environment" },  // Use the rear camera on mobile devices
-        {
-          fps: 10,  // Frames per second
-          qrbox: 250  // Display area for scanning
-        },
-        (qrCodeMessage) => {
+      // Start decoding from the video element
+      codeReader.decodeFromVideoDevice(null, "video", (result, err) => {
+        if (result) {
           // On successful QR code scan
-          x = qrCodeMessage; // Store the scanned QR data in variable `x`
+          x = result.text; // Store the scanned QR data in variable `x`
           document.getElementById("qr-data").textContent = x;
 
           // Stop the scanner after successful scan
-          qrCodeReader.stop().then(() => {
-            document.getElementById("qr-reader").style.display = "none";
-          });
-        },
-        (errorMessage) => {
-          // Optional: handle scan errors (if needed)
-          console.warn(`QR Code scanning failed: ${errorMessage}`);
+          codeReader.reset();
+          videoElement.style.display = "none"; // Hide video feed after scanning
         }
-      ).catch((err) => {
-        console.error("Failed to start QR scanner", err);
+        if (err && !(err instanceof ZXing.NotFoundException)) {
+          console.error("Error scanning QR code", err);
+        }
       });
     }
   </script>
