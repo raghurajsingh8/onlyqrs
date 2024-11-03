@@ -3,65 +3,82 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QR Code Scanner</title>
+  <title>Barcode Scanner</title>
   <style>
-    /* Basic styling */
-    #video {
-      display: none; /* Hide the scanner video feed initially */
+    /* Basic styling for the scanner */
+    #barcode-video {
+      display: none; /* Hide initially */
       width: 100%;
       max-width: 400px;
       margin-top: 20px;
     }
     .button {
       padding: 10px 20px;
-      background-color: #6200EA;
+      background-color: #00796b;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
       font-size: 16px;
     }
-    #qr-result {
+    #barcode-result {
       margin-top: 20px;
       font-size: 18px;
     }
   </style>
-  <!-- Import the ZXing library for QR code scanning -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/zxing/1.4.1/zxing.min.js"></script>
+  <!-- Import the QuaggaJS library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 </head>
 <body>
 
-  <!-- Button to open the QR scanner -->
-  <button class="button" onclick="startScanner()">Scan QR Code</button>
+  <!-- Button to start the barcode scanner -->
+  <button class="button" onclick="startBarcodeScanner()">Scan Barcode</button>
 
-  <!-- Video element to show camera feed -->
-  <video id="video"></video>
+  <!-- Video feed for the barcode scanner -->
+  <div id="barcode-video"></div>
 
-  <!-- Display scanned QR result -->
-  <div id="qr-result">Scanned QR Data: <span id="qr-data"></span></div>
+  <!-- Display scanned barcode result -->
+  <div id="barcode-result">Scanned Barcode Data: <span id="barcode-data"></span></div>
 
   <script>
-    let x = ""; // Variable to store QR code data
-    let codeReader = new ZXing.BrowserQRCodeReader();
+    let barcodeData = ""; // Variable to store the scanned barcode data
 
-    // Function to start the QR scanner
-    function startScanner() {
-      const videoElement = document.getElementById("video");
-      videoElement.style.display = "block"; // Show the video feed
+    // Function to start the barcode scanner
+    function startBarcodeScanner() {
+      document.getElementById("barcode-video").style.display = "block"; // Show the video feed
 
-      // Start decoding from the video element
-      codeReader.decodeFromVideoDevice(null, "video", (result, err) => {
-        if (result) {
-          // On successful QR code scan
-          x = result.text; // Store the scanned QR data in variable `x`
-          document.getElementById("qr-data").textContent = x;
-
-          // Stop the scanner after successful scan
-          codeReader.reset();
-          videoElement.style.display = "none"; // Hide video feed after scanning
+      // Initialize QuaggaJS with configuration
+      Quagga.init({
+        inputStream: {
+          name: "Live",
+          type: "LiveStream",
+          target: document.querySelector('#barcode-video'), // Attach video feed to #barcode-video div
+          constraints: {
+            width: 640,
+            height: 480,
+            facingMode: "environment" // Use rear camera on mobile
+          }
+        },
+        decoder: {
+          readers: ["code_128_reader", "ean_reader", "upc_reader", "ean_8_reader", "code_39_reader"] // Barcode types to decode
         }
-        if (err && !(err instanceof ZXing.NotFoundException)) {
-          console.error("Error scanning QR code", err);
+      }, function(err) {
+        if (err) {
+          console.log("Error initializing Quagga:", err);
+          return;
+        }
+        Quagga.start();
+      });
+
+      // Event listener for when a barcode is detected
+      Quagga.onDetected(function(result) {
+        if (result && result.codeResult && result.codeResult.code) {
+          barcodeData = result.codeResult.code; // Store the scanned barcode data
+          document.getElementById("barcode-data").textContent = barcodeData;
+
+          // Stop the scanner after detecting a barcode
+          Quagga.stop();
+          document.getElementById("barcode-video").style.display = "none"; // Hide video feed
         }
       });
     }
